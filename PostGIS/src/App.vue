@@ -1,7 +1,7 @@
 <script setup>
-import MapView from '@/components/MapView.vue'
+import AppShell from '@/components/AppShell.vue'
 </script>
 
 <template>
-  <MapView />
+  <AppShell />
 </template>

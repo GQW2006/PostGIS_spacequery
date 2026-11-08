@@ -1,76 +1,85 @@
-# PostGIS 多城市行政区视口查询
+# 成都市公共服务设施空间分布与可达性 WebGIS
 
-基于 **Flask + PostgreSQL/PostGIS** 与 **Vue3 + Mapbox GL** 的前后端分离项目。
-后端按城市表配置自动拼接多城市 `UNION ALL` 查询，提供视口 BBOX 裁剪与点查面接口；
-前端地图随视口（缩放/平移）联动刷新行政区面，点击面弹出所属行政区信息。
+基于 **Flask + PostgreSQL/PostGIS + pgRouting** 与 **Vue3 + Vite + Pinia + Mapbox GL** 的前后端分离 WebGIS。
+在地图上展示成都市小学 / 中学 / 菜市场的空间分布，支持视口联动查询、点查所属行政区、服务区覆盖分析、
+**2SFCA 可达性分级**、路网等时圈与结果导出。
 
-## 功能特性
+## 功能
 
-- **多城市查询**：后端通过 `CITY_TABLES` 注册表按表名自动拼接多城市 `UNION ALL` 查询，新增城市只需增加一条配置
-- **视口 BBOX 裁剪**：基于 `ST_MakeEnvelope` + `ST_Intersects`，按当前视口范围裁剪行政区面，统一返回 GeoJSON FeatureCollection
-- **点查面接口**：基于 `ST_Contains`，查询某经纬度点所属行政区
-- **视口联动**：前端监听地图 `moveend`，300ms 防抖后按当前视口请求并刷新行政区面；点击地图弹窗显示所属行政区
-- **多城市选择**：前端顶部面板可勾选参与查询的城市
-- **API 文档**：flask-smorest 自动生成 OpenAPI 文档（`/docs`）
+- **地图工作台**：三栏布局（顶栏 / 左面板 / 地图 + 右侧抽屉 / 状态栏），浅色、深色、卫星三种底图
+- **设施查询**：视口 BBOX 查询（`ST_Intersects`）、关键词搜索、附近设施（`ST_DWithin`）、三级缩放下自动点聚合
+- **视口联动**：`moveend` + 300ms 防抖，缩放/平移时设施点与行政区面动态刷新
+- **点查归属**：点击任意位置或设施，展示所属区县 / 街道统计（`ST_Contains`、客户端射线法）
+- **图层管理**：区县界、市界、三类设施、分析结果图层显隐，图例随图层同步
+- **空间分析**：
+  - 服务区覆盖（缓冲区 + 覆盖人口/覆盖率）
+  - 2SFCA 可达性分级（按 P25/P50/P75 分位数分为优/良/一般/差）
+  - 路网等时圈（pgRouting `pgr_drivingDistance` + 凹包）
+  - 导出 GeoJSON / CSV
+- **OpenAPI 文档**：flask-smorest 自动生成，访问 `/docs`
 
 ## 技术栈
 
-| 端 | 技术 |
+| 层 | 技术 |
 | --- | --- |
-| 后端 | Python 3 · Flask · flask-smorest · SQLAlchemy · PostgreSQL/PostGIS |
-| 前端 | Vue 3 · Vite · Mapbox GL JS · axios |
+| 前端 | Vue 3（`<script setup>`）· Vite · Pinia · Mapbox GL JS · axios |
+| 后端 | Python 3.13 · Flask · flask-smorest · SQLAlchemy Core · psycopg2 |
+| 数据库 | PostgreSQL 17 · PostGIS 3.6 · pgRouting 4.0 |
+| 地图服务 | GeoServer（WMS 渲染区县、市界、路网、人口栅格） |
+| 数据处理 | 原生 SQL 离线预计算（2SFCA、区县人口、最近设施距离） |
 
 ## 目录结构
 
 ```
 PostGIS/
-├── backend/                # 后端（Flask + PostGIS）
+├── backend/
 │   ├── app/
-│   │   ├── __init__.py     # 应用工厂
-│   │   ├── config.py       # 配置（读取 .env 的 DATABASE_URL）
-│   │   ├── extensions.py   # SQLAlchemy 引擎初始化
-│   │   ├── schemas/        # marshmallow 参数/响应 Schema
-│   │   ├── services/
-│   │   │   ├── city_registry.py   # 多城市表配置注册表（新增城市在此配置）
-│   │   │   └── geo_queries.py     # UNION 查询 / BBOX 裁剪 / 点查面
-│   │   └── resources/geo.py       # flask-smorest 接口
-│   ├── run.py              # 启动入口（默认 5005 端口）
-│   └── requirements.txt
-└── PostGIS/                # 前端（Vue3 + Vite + Mapbox GL）
-    ├── src/
-    │   ├── api/
-    │   │   ├── http.js     # axios 实例 + 请求/响应拦截器
-    │   │   └── geo.js      # 地理查询 API 封装
-    │   ├── composables/useAreaLayer.js   # 视口联动图层组合式函数
-    │   ├── components/MapView.vue        # 地图组件（moveend 防抖、点击弹窗）
-    │   └── utils/debounce.js
-    ├── .env                # Mapbox token（VITE_TOKEN）
-    └── vite.config.js      # /api 代理到后端
+│   │   ├── __init__.py            # 应用工厂、错误格式、蓝图注册
+│   │   ├── config.py              # 读 .env
+│   │   ├── extensions.py          # SQLAlchemy 引擎
+│   │   ├── schemas/               # geo / facility / analysis 参数与响应
+│   │   ├── services/              # city_registry / geo_queries / facility_queries / analysis_queries
+│   │   ├── resources/             # geo / facility / analysis 路由
+│   │   └── utils/                 # GeoJSON 组装、异常转换
+│   ├── scripts/build_analysis.py  # 2SFCA 等预计算脚本
+│   └── run.py                     # 启动入口（5005）
+├── PostGIS/
+│   ├── src/
+│   │   ├── api/                   # http / geo / facility / analysis / geoserver
+│   │   ├── stores/                # layer / filter / ui（Pinia）
+│   │   ├── composables/           # useAreaLayer / useAnalysisLayer
+│   │   ├── components/            # AppShell、MapView、LayerTree、AnalysisPanel…
+│   │   └── styles/tokens.css      # 设计令牌
+│   └── vite.config.js             # /api → 5005，/geoserver → 8080
+└── docs/                          # 需求、技术选型、开发与 UI 任务书、实现说明
 ```
 
 ## 快速开始
 
-### 1. 数据库准备
+### 1. 环境
 
-- PostgreSQL 安装 PostGIS 扩展，创建数据库（默认 `gisdb`）
-- 建表并写入行政区面数据（字段需包含 `name`、`gb`、`geom`，几何为 EPSG:4326）：
+- PostgreSQL 17 + PostGIS 3.6 + pgRouting 4.0
+- 数据库 `gisdb`（已在 `backend/.env` 配置）
+- GeoServer（`http://localhost:8080/geoserver`，账号密码见本地配置），已发布以下图层：
 
-```sql
-CREATE TABLE chengdu_city (
-  id  SERIAL PRIMARY KEY,
-  name VARCHAR(100),
-  gb   VARCHAR(20),
-  geom geometry(MULTIPOLYGON, 4326)
-);
-```
+| 图层 | 类型 | 用途 |
+| --- | --- | --- |
+| `chengdu:chengdu_districts` | 面 | 区县界（WMS） |
+| `chengdu:chengdu_boundary` | 面 | 市界（WMS） |
+| `chengdu:chengdu_roads` | 线 | 路网（WMS，默认关闭） |
+| `chengdu:population` | 栅格 | 人口栅格（WMS，默认关闭） |
+| `chengdu:chengdu_poi` | 点 | 设施点位（前端改用 `/api/facilities` 以便交互与聚合） |
 
 ### 2. 后端
 
 ```bash
 cd backend
 pip install -r requirements.txt
-# 按需修改 .env（DATABASE_URL）
-python run.py          # 默认 http://127.0.0.1:5005
+
+# 首次运行：生成分析预计算表（约 2 分钟，可重复执行）
+python scripts/build_analysis.py
+
+python run.py          # http://127.0.0.1:5005
 ```
 
 接口文档：<http://127.0.0.1:5005/docs>
@@ -79,54 +88,71 @@ python run.py          # 默认 http://127.0.0.1:5005
 
 ```bash
 cd PostGIS
-npm install
-# 复制 .env.example 为 .env 并填入 Mapbox token
-npm run dev            # 默认 http://localhost:5173，/api 自动代理到后端
+npm install            # 依赖含 pinia / mapbox-gl / axios
+# 在 .env 中配置 VITE_TOKEN（Mapbox token）
+npm run dev            # http://localhost:5173
 ```
 
-## 多城市配置（新增城市）
+## 接口
 
-后端 [city_registry.py](backend/app/services/city_registry.py) 中维护 `CITY_TABLES`，
-**新增城市只需在此增加一项**，接口会自动将该表并入 UNION 查询：
+所有地理接口返回：
 
-```python
-CITY_TABLES = {
-    "chengdu": {"table": "chengdu_city", "label": "成都"},
-    "kunming": {"table": "kunming_city", "label": "昆明"},
-    # "newcity": {"table": "newcity_table", "label": "新城市"},
-}
+```json
+{ "type": "FeatureCollection", "features": [], "meta": { "count": 0, "truncated": false } }
 ```
 
-前端无需改动，加载时会通过 `/api/cities` 自动获取城市列表并生成勾选控件。
+错误统一：
 
-## API 接口
+```json
+{ "message": "bbox 格式错误，应为 minx,miny,maxx,maxy" }
+```
 
-统一返回 GeoJSON `FeatureCollection`：
+### 设施与区县
 
 | 方法 | 路径 | 说明 |
 | --- | --- | --- |
-| GET | `/api/cities` | 城市配置列表 |
-| GET | `/api/areas?bbox=minx,miny,maxx,maxy&cities=chengdu,kunming` | 视口 BBOX 裁剪查询行政区面 |
-| GET | `/api/areas/point?lng=&lat=&cities=` | 点查面：返回包含该点的行政区 |
+| GET | `/api/facilities` | 视口查询。参数 `bbox`（必填）、`types`、`district`、`name`、`limit` |
+| GET | `/api/facilities/{poi_id}` | 设施详情 + 所属区县 |
+| GET | `/api/facilities/nearby` | 附近设施。参数 `lng`、`lat`、`radius`、`types` |
+| GET | `/api/facilities/stats` | 三类设施全量数量 |
+| GET | `/api/districts` | 20 个区县列表 |
+| GET | `/api/districts/geojson` | 区县面 GeoJSON |
+| GET | `/api/boundary` | 市域轮廓 GeoJSON |
 
-参数说明：
+### 空间分析
 
-- `bbox`：视口范围 `minx,miny,maxx,maxy`（EPSG:4326），基于 `ST_MakeEnvelope` + `ST_Intersects`
-- `cities`：逗号分隔的城市 key，缺省查询全部配置城市
-- `lng` / `lat`：点查询经纬度（EPSG:4326），基于 `ST_Contains`
-
-示例：
-
-```bash
-# 查询覆盖两城的行政区
-curl "http://127.0.0.1:5005/api/areas?bbox=102,24,106,32"
-# 查询成都市中心的所属行政区
-curl "http://127.0.0.1:5005/api/areas/point?lng=104.06&lat=30.67"
-```
-
-## 环境变量
-
-| 文件 | 变量 | 说明 |
+| 方法 | 路径 | 说明 |
 | --- | --- | --- |
-| `backend/.env` | `DATABASE_URL` | SQLAlchemy 数据库连接串，如 `postgresql+psycopg2://user:pass@127.0.0.1:5432/gisdb` |
-| `PostGIS/.env` | `VITE_TOKEN` | Mapbox GL access token |
+| GET | `/api/analysis/nearest` | 最近设施（`lng`、`lat`、`type`） |
+| GET | `/api/analysis/district-stats` | 区县统计（`type`） |
+| GET | `/api/analysis/coverage` | 服务区覆盖（`type`、`radius`、`district`） |
+| GET | `/api/analysis/accessibility` | 2SFCA 可达性分级（`type`） |
+| GET | `/api/analysis/isochrone` | 路网等时圈（`lng`、`lat`、`minutes`） |
+| GET | `/api/analysis/export` | 导出（`kind`、`format`、`type`） |
+
+保留的旧接口：`/api/cities`、`/api/areas`、`/api/areas/point`。
+
+## 演示流程（约 3 分钟）
+
+1. 打开页面，说明整体分布与左侧图层数量；
+2. 搜索设施 → 地图飞行定位 → 右侧抽屉查看详情与所属区县；
+3. 拖动/缩放地图，观察视口联动与聚合气泡；
+4. 切到「分析」Tab：选类型、拖半径 → 覆盖人口/覆盖率 → 2SFCA 可达性分级 → 导出；
+5. 计算 10 分钟等时圈，展示路网可达范围；
+6. 打开 `/docs` 展示 OpenAPI 与接口分层。
+
+## 文档
+
+- [文档索引](docs/README.md)
+- [需求规格说明书](docs/01-需求规格说明书.md)
+- [技术选型文档](docs/02-技术选型文档.md)
+- [开发任务书](docs/07-开发任务书（给Agent）.md)
+- [UI 设计任务书](docs/08-UI设计任务书（给Agent）.md)
+- [开发实现说明（含文件增删改与代码讲解）](docs/09-开发实现说明.md)
+
+## 数据说明
+
+- 设施数据：高德 POI（2026-11），共 3,036 条（小学 1,085 / 中学 771 / 菜市场 1,180）
+- 坐标系：EPSG:4326；距离计算统一使用 `geography`（米）
+- 人口：100m 栅格，值 = 该格人口，-1 为 nodata
+- **仓库不包含原始数据与本地资产**：`data/`（原始 GeoJSON，约 460MB）、`_osm/`、`data_pipeline/`、`.screenshots/` 仅本地保留；数据库连接串与 Mapbox token 通过 `.env` 配置，不提交到仓库

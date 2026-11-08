@@ -4,6 +4,7 @@ from flask import abort
 from flask.views import MethodView
 from flask_smorest import Blueprint
 
+from app.schemas.facility import DistrictSchema
 from app.schemas.geo import (
     BBoxQueryArgs,
     CitySchema,
@@ -11,14 +12,42 @@ from app.schemas.geo import (
     PointQueryArgs,
 )
 from app.services import city_registry
+from app.services import facility_queries
 from app.services import geo_queries
 
 blp = Blueprint(
     "geo",
     __name__,
     url_prefix="/api",
-    description="PostGIS 多城市行政区查询",
+    description="PostGIS 行政区与设施地理查询",
 )
+
+
+@blp.route("/districts")
+class DistrictList(MethodView):
+    """成都市 20 个区县列表，供筛选下拉使用。"""
+
+    @blp.response(200, DistrictSchema(many=True))
+    def get(self):
+        return facility_queries.query_districts()
+
+
+@blp.route("/districts/geojson")
+class DistrictGeoJSON(MethodView):
+    """区县面 GeoJSON，供地图面图层与点击识别。"""
+
+    @blp.response(200, FeatureCollectionSchema)
+    def get(self):
+        return facility_queries.query_district_geojson()
+
+
+@blp.route("/boundary")
+class BoundaryGeoJSON(MethodView):
+    """成都市域轮廓 GeoJSON。"""
+
+    @blp.response(200, FeatureCollectionSchema)
+    def get(self):
+        return facility_queries.query_boundary_geojson()
 
 
 @blp.route("/cities")

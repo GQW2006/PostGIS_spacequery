@@ -16,10 +16,16 @@ export default defineConfig({
     },
   },
   server: {
-    // 开发环境跨域代理：/api -> Flask 后端
+    // 开发环境跨域代理
     proxy: {
+      // Flask 业务接口
       '/api': {
         target: 'http://127.0.0.1:5005',
+        changeOrigin: true,
+      },
+      // GeoServer 地图服务（WMS/WFS）
+      '/geoserver': {
+        target: 'http://localhost:8080',
         changeOrigin: true,
       },
     },

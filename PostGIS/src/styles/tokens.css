@@ -1,0 +1,106 @@
+/* 设计令牌：颜色、字号、尺寸严格对齐 UI 任务书 §2/§3/§4 */
+
+:root {
+  /* 界面色 */
+  --c-primary: #1668dc;
+  --c-primary-hover: #0e5ac4;
+  --c-action: #1668dc;          /* 可点击动作：按钮、tab 选中态 */
+  --c-action-hover: #0e5ac4;
+  --c-cluster: #0e5ac4;         /* 聚合环：比单点深一档 */
+  --c-success: #00b42a;
+  --c-warning: #ff7d00;
+  --c-error: #f53f3f;
+  --c-bg: #f0f2f5;
+  --c-panel: #ffffff;
+  --c-card: #f7f8fa;
+  --c-line: #e5e6eb;
+  --c-text: #1f2329;
+  --c-text-2: #646a73;
+  --c-text-disabled: #c9cdd4;
+  --c-ward-line: #8a8f99;       /* 区县界描边 */
+  --c-city-line: #1f2329;       /* 市界描边 */
+
+  /* 设施符号 */
+  --c-school: #1668dc;
+  --c-middle: #722ed1;
+  --c-market: #00b42a;
+
+  /* 可达性分级 */
+  --c-level-a: #0050b3;
+  --c-level-b: #4e9be8;
+  --c-level-c: #faad14;
+  --c-level-d: #f5222d;
+
+  /* 尺寸 */
+  --h-topbar: 56px;
+  --w-side: 320px;
+  --w-drawer: 360px;
+  --h-status: 32px;
+  --gap: 8px;
+  --radius-panel: 8px;
+  --radius-btn: 6px;
+
+  /* 字号 */
+  --fs-h1: 20px;
+  --fs-h2: 16px;
+  --fs-body: 14px;
+  --fs-ui: 13px;                /* 紧凑 UI 文字：按钮、分组标题 */
+  --fs-caption: 12px;
+  --fs-number: 24px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  font-size: var(--fs-body);
+  color: var(--c-text);
+  background: var(--c-bg);
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+button {
+  font-family: inherit;
+  font-size: var(--fs-ui);
+  cursor: pointer;
+  border: 1px solid var(--c-line);
+  background: var(--c-panel);
+  color: var(--c-text);
+  border-radius: var(--radius-btn);
+}
+
+button:disabled {
+  cursor: not-allowed;
+  color: var(--c-text-disabled);
+}
+
+:focus-visible {
+  outline: 2px solid var(--c-action);
+  outline-offset: 2px;
+}
+
+.btn-primary {
+  background: var(--c-action);
+  border-color: var(--c-action);
+  color: #fff;
+  height: 36px;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--c-action-hover);
+  border-color: var(--c-action-hover);
+}

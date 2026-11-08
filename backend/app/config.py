@@ -17,7 +17,9 @@ class Config:
     OPENAPI_SWAGGER_UI_PATH = "/docs"
     OPENAPI_REDOC_PATH = "/redoc"
 
-    DATABASE_URL = os.getenv(
-        "DATABASE_URL",
-        "postgresql+psycopg2://postgres:123123@127.0.0.1:5432/gisdb",
-    )
+    # 数据库连接串必须由 backend/.env 提供，不在代码中保留任何凭据
+    DATABASE_URL = os.getenv("DATABASE_URL")
+    if not DATABASE_URL:
+        raise RuntimeError(
+            "缺少 DATABASE_URL：请复制 backend/.env.example 为 backend/.env 并填写连接串"
+        )

@@ -23,3 +23,18 @@ export function fetchPointArea({ lng, lat, cities }) {
     params: { lng, lat, cities: cities?.join(',') },
   })
 }
+
+/** 成都市 20 个区县列表 */
+export function fetchDistricts() {
+  return http.get('/districts')
+}
+
+/** 区县面 GeoJSON（地图面图层） */
+export function fetchDistrictGeoJSON() {
+  return http.get('/districts/geojson')
+}
+
+/** 成都市域轮廓 GeoJSON */
+export function fetchBoundaryGeoJSON() {
+  return http.get('/boundary')
+}

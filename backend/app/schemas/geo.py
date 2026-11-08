@@ -37,13 +37,18 @@ class PointQueryArgs(Schema):
 
 class FeatureSchema(Schema):
     type = fields.String(dump_default="Feature")
+    id = fields.Raw(allow_none=True)
     geometry = fields.Raw(allow_none=True)
     properties = fields.Dict()
 
 
 class FeatureCollectionSchema(Schema):
+    """统一地理响应：要素集合 + meta（可选）+ stats（分析类接口可选）。"""
+
     type = fields.String(dump_default="FeatureCollection")
     features = fields.List(fields.Nested(FeatureSchema))
+    meta = fields.Dict(allow_none=True)
+    stats = fields.Dict(allow_none=True)
 
 
 class CitySchema(Schema):

@@ -24,6 +24,7 @@ http.interceptors.response.use(
   (response) => response.data,
   (error) => {
     const message =
+      error.response?.data?.message ||
       error.response?.data?.error?.message ||
       error.message ||
       '请求失败'
